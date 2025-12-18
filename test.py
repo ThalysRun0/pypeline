@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable, Callable, Any, Dict, List, Union
 from dataclasses import dataclass, field
 from datetime import datetime
+import pandas as pd
 
 # =========================
 # 1. Protocols (contrats)
@@ -246,79 +247,48 @@ class DataPipeLine(PipeLine):
         return self
 
 
-#%%
-import pandas as pd
-import numpy as np
-
-# Paramètres
-start_date = "2024-01-01"
-end_date = "2024-12-31"
-
-# Génération du calendrier
-dates = pd.date_range(start=start_date, end=end_date, freq="D")
-
-df = pd.DataFrame({"date": dates})
-
-# Variables calendaires utiles
-df["weekday"] = df["date"].dt.weekday        # 0=lundi, 6=dimanche
-df["week"] = df["date"].dt.isocalendar().week
-df["month"] = df["date"].dt.month
-
-# Jour ON / OFF (exemple : OFF le week-end)
-df["is_on"] = df["weekday"] < 5
-
-# Facteurs journaliers
-np.random.seed(42)
-
-df["factor_a"] = np.random.normal(loc=1.0, scale=0.1, size=len(df))
-df["factor_b"] = np.random.choice([0.8, 1.0, 1.2], size=len(df))
-
-# Montant journalier (logique métier simulée)
-base_amount = 100.0
-
-df["amount_eur"] = (
-    base_amount
-    * df["factor_a"]
-    * df["factor_b"]
-    * df["is_on"].astype(int)
-    + np.random.normal(0, 5, size=len(df))
-)
 
 #%%
 @extracter(version="0.1.10", owner="fiper")
 def lire_donnees(path: str) -> pd.DataFrame:
     print(f"on lit les données source depuis {path}")
+    df = pd.read_csv(path, header=0)
     return df
 
 @transformer(version="0.1.10", owner="fiper")
-def filtre_jour_ouvre(data: pd.DataFrame, is_on: bool=True):
-    print(f"on transforme les données transmises par un extracter")
-    return data.loc[data.is_on.eq(is_on)]
-
-@transformer(version="0.1.10", owner="fiper")
-def filtre_jour_chome(data: pd.DataFrame, is_on: bool=False):
-    print(f"on transforme les données transmises par un extracter")
-    return data.loc[data.is_on.eq(is_on)]
+def filtre_is_sex_oriented(data: pd.DataFrame, sex: str):
+    print(f"on filtre les données transmises par un extracter")
+    return data.loc[data.Sex.eq(sex)]
 
 @loader(version="0.1.10", owner="fiper")
 def print_rows(data):
     print(f"on affiche les données")
     print(data)
 
+
 #%%
+df = lire_donnees(path="people-100.csv")
+
+#%%
+df.info()
+
+#%%
+# Méthode de construction du pipeline
+# injestion de dépendance
 pipeline = DataPipeLine(
-    extracter=Pipe(lire_donnees, params={"path": "people.csv"}),
+    extracter=Pipe(lire_donnees, params={"path": "people-100.csv"}),
     transformers=[
-        Pipe(filtre_jour_ouvre, params={"is_on": True}),
-        Pipe(filtre_jour_chome, params={"is_on": False}),
+        Pipe(filtre_is_sex_oriented, params={"sex": "Female"}),
+        Pipe(filtre_is_sex_oriented, params={"sex": "Male"}), # Means result is nothing !
     ],
     loader=Pipe(print_rows),
 )
 
 #%%
+# Autre méthode en mode SDL
 pipeline = DataPipeLine() \
-    .extract(lire_donnees, path="people.csv") \
-    .transform(filtre_jour_ouvre, **{"is_on": True}) \
+    .extract(lire_donnees, path="people-100.csv") \
+    .transform(filtre_is_sex_oriented, **{"sex": "Female"}) \
     .load(print_rows)
 
 #%%

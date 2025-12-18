@@ -312,8 +312,6 @@ pipeline.to_dot()
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# --- Mock metadata and pipeline structure (representative of the registry content)
-
 G = nx.DiGraph()
 
 for name, meta in nodes:

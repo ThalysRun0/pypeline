@@ -249,27 +249,26 @@ class DataPipeLine(PipeLine):
 
 
 #%%
-@extracter(version="0.1.10", owner="fiper")
+@extracter(version="0.1.10", owner="data-team")
 def lire_donnees(path: str) -> pd.DataFrame:
     print(f"on lit les données source depuis {path}")
     df = pd.read_csv(path, header=0)
     return df
 
-@transformer(version="0.1.10", owner="fiper")
+@transformer(version="0.1.10", owner="viz-team")
 def filtre_is_sex_oriented(data: pd.DataFrame, sex: str):
     print(f"on filtre les données transmises par un extracter")
     return data.loc[data.Sex.eq(sex)]
 
-@loader(version="0.1.10", owner="fiper")
+@loader(version="0.1.10", owner="viz-team")
 def print_rows(data):
     print(f"on affiche les données")
     print(data)
 
 
 #%%
+# test read function
 df = lire_donnees(path="people-100.csv")
-
-#%%
 df.info()
 
 #%%
